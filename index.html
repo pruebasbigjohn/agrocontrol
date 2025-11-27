@@ -1,0 +1,1738 @@
+```html
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgroControl - Control Ganadero</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .status-badge { padding: 0.25rem 0.5rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; }
+        .status-activo { background-color: #DCFCE7; color: #166534; }
+        .status-vendido { background-color: #DBEAFE; color: #1E40AF; }
+        .status-fallecido { background-color: #FEE2E2; color: #991B1B; }
+        .tab-button { padding: 0.75rem 1rem; font-weight: 500; border-bottom: 3px solid transparent; transition: all 0.2s ease; cursor: pointer; }
+        .tab-button.active { border-bottom-color: #10B981; color: #10B981; }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: #4B5563; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 0.5rem; border: 1px solid #D1D5DB; border-radius: 0.375rem; font-size: 0.875rem; }
+        .btn { padding: 0.75rem 1rem; border-radius: 0.375rem; font-weight: 500; transition: all 0.2s ease; cursor: pointer; }
+        .btn-primary { background-color: #10B981; color: white; border: none; }
+        .btn-secondary { background-color: #E5E7EB; color: #4B5563; border: none; }
+        .btn-danger { background-color: #EF4444; color: white; border: none; }
+        .card { background-color: white; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 1.5rem; margin-bottom: 1rem; }
+        .mobile-nav { position: fixed; bottom: 0; left: 0; right: 0; background-color: white; border-top: 1px solid #E5E7EB; display: flex; padding: 0.5rem 0; z-index: 100; }
+        .nav-item { flex: 1; text-align: center; padding: 0.75rem 0; font-size: 0.75rem; color: #6B7280; cursor: pointer; }
+        .nav-item.active { color: #10B981; }
+        @media (min-width: 768px) { .mobile-nav { display: none; } .desktop-container { max-width: 1200px; margin: 0 auto; padding: 2rem; } }
+        .animal-photo { width: 100%; height: 200px; background-color: #F3F4F6; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem; overflow: hidden; }
+        .animal-photo img { max-width: 100%; max-height: 100%; object-fit: cover; }
+        .animal-list { max-height: 60vh; overflow-y: auto; }
+        .filter-container { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; padding: 0.5rem; background-color: #F3F4F6; border-radius: 0.375rem; }
+        .filter-tag { padding: 0.25rem 0.5rem; background-color: #10B981; color: white; border-radius: 9999px; font-size: 0.75rem; cursor: pointer; }
+        .activity-container { max-height: 200px; overflow-y: auto; }
+        .modal { position: fixed; inset: 0; background-color: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; padding: 1rem; z-index: 50; }
+        .modal-content { background-color: white; border-radius: 0.5rem; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; }
+        .modal.hidden { display: none; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Mobile Navigation -->
+    <div class="mobile-nav md:hidden">
+        <div class="nav-item active" onclick="showTab('dashboard')">📊<span>Inicio</span></div>
+        <div class="nav-item" onclick="showTab('animales')">🐄<span>Animales</span></div>
+        <div class="nav-item" onclick="showTab('compras')">🛒<span>Compras</span></div>
+        <div class="nav-item" onclick="showTab('ventas')">💰<span>Ventas</span></div>
+        <div class="nav-item" onclick="showTab('potreros')">🌾<span>Potreros</span></div>
+        <div class="nav-item" onclick="showTab('reportes')">📈<span>Reportes</span></div>
+    </div>
+
+    <div class="desktop-container">
+        <!-- Header -->
+        <header class="bg-white shadow-sm border-b border-gray-200 px-6 py-4 mb-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
+                        <span class="text-white font-bold text-lg">A</span>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-gray-800">AgroControl</h1>
+                        <p class="text-sm text-gray-500">Control Ganadero - Pesos Colombianos</p>
+                    </div>
+                </div>
+                <button id="accionPrincipal" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2 text-sm">
+                    <span id="textoAccion">➕ Nuevo Animal</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Tabs -->
+        <div class="bg-white shadow-sm border-b border-gray-200 mb-6 hidden md:block">
+            <div class="flex">
+                <button class="tab-button active" onclick="showTab('dashboard')">Inicio</button>
+                <button class="tab-button" onclick="showTab('animales')">Animales</button>
+                <button class="tab-button" onclick="showTab('compras')">Compras</button>
+                <button class="tab-button" onclick="showTab('ventas')">Ventas</button>
+                <button class="tab-button" onclick="showTab('potreros')">Potreros</button>
+                <button class="tab-button" onclick="showTab('reportes')">Reportes</button>
+            </div>
+        </div>
+
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div class="bg-white rounded-lg p-4 shadow">
+                    <div class="flex items-center">
+                        <div class="p-2 bg-blue-100 rounded-lg"><span class="text-blue-600 text-xl">🐄</span></div>
+                        <div class="ml-3">
+                            <p class="text-sm font-medium text-gray-600">Total Animales</p>
+                            <p class="text-2xl font-bold text-gray-800" id="totalAnimales">0</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg p-4 shadow">
+                    <div class="flex items-center">
+                        <div class="p-2 bg-green-100 rounded-lg"><span class="text-green-600 text-xl">✅</span></div>
+                        <div class="ml-3">
+                            <p class="text-sm font-medium text-gray-600">Vacunados</p>
+                            <p class="text-2xl font-bold text-gray-800" id="animalesVacunados">0</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg p-4 shadow">
+                    <div class="flex items-center">
+                        <div class="p-2 bg-yellow-100 rounded-lg"><span class="text-yellow-600 text-xl">💰</span></div>
+                        <div class="ml-3">
+                            <p class="text-sm font-medium text-gray-600">Ventas Hoy</p>
+                            <p class="text-2xl font-bold text-gray-800" id="ventasHoy">$0</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg p-4 shadow">
+                    <div class="flex items-center">
+                        <div class="p-2 bg-purple-100 rounded-lg"><span class="text-purple-600 text-xl">📊</span></div>
+                        <div class="ml-3">
+                            <p class="text-sm font-medium text-gray-600">Ganancia Hoy</p>
+                            <p class="text-2xl font-bold text-gray-800" id="gananciaHoy">$0</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-6 mb-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-800">Animales Recientes</h3>
+                    <button onclick="showTab('animales')" class="text-sm text-green-600 hover:text-green-800">Ver todos →</button>
+                </div>
+                <div class="space-y-3" id="animalesRecientes"></div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-800">Actividad Reciente</h3>
+                    <button onclick="limpiarActividad()" class="text-sm text-red-600 hover:text-red-800">Limpiar</button>
+                </div>
+                <div class="space-y-3 activity-container" id="actividadReciente"></div>
+            </div>
+        </div>
+
+        <!-- Animales Tab -->
+        <div id="animales" class="tab-content">
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex flex-col sm:flex-row justify-between mb-4 gap-4">
+                    <div class="relative flex-1">
+                        <input type="text" id="buscarAnimal" placeholder="Buscar por arete..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 absolute left-3 top-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                </div>
+                
+                <div class="filter-container">
+                    <span class="text-sm font-medium text-gray-700 mr-2">Filtros:</span>
+                    <div class="flex flex-wrap gap-2">
+                        <button class="filter-tag" onclick="aplicarFiltro('estado', 'todos')">Todos</button>
+                        <button class="filter-tag" onclick="aplicarFiltro('estado', 'activo')">Activos</button>
+                        <button class="filter-tag" onclick="aplicarFiltro('estado', 'vendido')">Vendidos</button>
+                        <button class="filter-tag" onclick="aplicarFiltro('estado', 'fallecido')">Fallecidos</button>
+                        <button class="filter-tag" onclick="aplicarFiltro('sexo', 'hembra')">Hembras</button>
+                        <button class="filter-tag" onclick="aplicarFiltro('sexo', 'macho')">Machos</button>
+                    </div>
+                </div>
+                
+                <div class="space-y-3 animal-list" id="listaAnimales"></div>
+            </div>
+        </div>
+
+        <!-- Compras Tab -->
+        <div id="compras" class="tab-content">
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-lg font-semibold text-gray-800">Registro de Compras</h3>
+                </div>
+                <div class="space-y-3 animal-list" id="listaCompras"></div>
+            </div>
+        </div>
+
+        <!-- Ventas Tab -->
+        <div id="ventas" class="tab-content">
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-lg font-semibold text-gray-800">Registro de Ventas</h3>
+                </div>
+                <div class="space-y-3 animal-list" id="listaVentas"></div>
+            </div>
+        </div>
+
+        <!-- Potreros Tab -->
+        <div id="potreros" class="tab-content">
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-lg font-semibold text-gray-800">Gestión de Potreros</h3>
+                </div>
+                <div class="space-y-4" id="listaPotreros"></div>
+            </div>
+        </div>
+
+        <!-- Reportes Tab -->
+        <div id="reportes" class="tab-content">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-6">Reportes y Exportación</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="card">
+                        <h4 class="font-semibold text-gray-800 mb-4">Reportes Predefinidos</h4>
+                        <div class="space-y-3">
+                            <button onclick="generarReporte('inventario')" class="w-full text-left p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">Inventario Completo</button>
+                            <button onclick="generarReporte('razas')" class="w-full text-left p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">Animales por Raza</button>
+                            <button onclick="generarReporte('sanitario')" class="w-full text-left p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">Control Sanitario</button>
+                            <button onclick="generarReporte('potreros')" class="w-full text-left p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">Distribución por Potreros</button>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h4 class="font-semibold text-gray-800 mb-4">Exportar Datos</h4>
+                        <p class="text-sm text-gray-600 mb-4">Exporta tus datos a formatos que puedes abrir en Excel u otras aplicaciones.</p>
+                        <button onclick="exportarExcel()" class="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition-colors font-medium">
+                            📥 Exportar a Excel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modales -->
+    <div id="nuevoAnimalModal" class="modal hidden"><div class="modal-content"><div class="p-6">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-lg font-semibold text-gray-800">Nuevo Animal</h3>
+            <button onclick="closeModal('nuevoAnimalModal')" class="text-gray-500 hover:text-gray-700">×</button>
+        </div>
+        <form id="formularioAnimal">
+            <div class="space-y-4">
+                <div class="form-group"><label>Número de Arete *</label><input type="text" id="arete" required></div>
+                <div class="form-group"><label>Raza *</label><select id="raza" required><option value="">Seleccionar raza</option><option>Angus</option><option>Hereford</option><option>Charolais</option><option>Limousin</option><option>Simmental</option><option>Blanco Orejinegro</option><option>Jersey</option><option>Guernsey</option></select></div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="form-group"><label>Sexo *</label><select id="sexo" required><option value="">Seleccionar</option><option>Hembra</option><option>Macho</option></select></div>
+                    <div class="form-group"><label>Tipo de Edad *</label><select id="tipoEdad" required onchange="cambiarTipoEdad()"><option value="fecha">Fecha de Nacimiento</option><option value="estimada">Edad Estimada</option></select></div>
+                </div>
+                <div id="campoFechaNacimiento" class="form-group"><label>Fecha de Nacimiento</label><input type="date" id="fechaNacimiento"></div>
+                <div id="campoEdadEstimada" class="grid grid-cols-3 gap-2" style="display: none;">
+                    <div class="form-group"><label>Años</label><input type="number" id="anosEstimados" min="0" value="0"></div>
+                    <div class="form-group"><label>Meses</label><input type="number" id="mesesEstimados" min="0" max="11" value="0"></div>
+                    <div class="form-group"><label>Días</label><input type="number" id="diasEstimados" min="0" max="29" value="0"></div>
+                </div>
+                <div class="form-group"><label>Peso Inicial (kg) *</label><input type="number" id="pesoInicial" required min="0" step="0.1"></div>
+                <div class="form-group"><label>Precio de Compra (COP) *</label><input type="number" id="precioCompra" required min="0"></div>
+                <div class="form-group"><label>Costo de Transporte (COP)</label><input type="number" id="costoTransporte" min="0" value="0"></div>
+                <div class="form-group"><label>Potrero de Asignación</label><select id="potreroAsignacion"><option value="">Seleccionar potrero</option></select></div>
+                <div class="form-group"><label>Foto del Animal</label>
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                        <img id="imagenPrevia" src="https://placehold.co/300x200/e5e7eb/6b7280?text=Foto+del+Animal" alt="Vista previa" style="display: none;">
+                        <svg id="iconoCamara" xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-gray-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <p class="text-sm text-gray-500 mb-2">Toma una foto o selecciona del álbum</p>
+                        <input type="file" id="fotoAnimal" accept="image/*" class="hidden">
+                        <button type="button" onclick="document.getElementById('fotoAnimal').click()" class="text-sm text-green-600">Seleccionar Foto</button>
+                    </div>
+                </div>
+                <div class="form-group"><label>Observaciones</label><textarea id="observaciones" rows="3" placeholder="Información adicional..."></textarea></div>
+            </div>
+            <div class="flex justify-end space-x-3 mt-6">
+                <button type="button" onclick="closeModal('nuevoAnimalModal')" class="btn btn-secondary">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Registrar Animal</button>
+            </div>
+        </form>
+    </div></div></div>
+
+    <div id="detalleAnimalModal" class="modal hidden"><div class="modal-content"><div class="p-6">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-lg font-semibold text-gray-800" id="tituloDetalleAnimal">Detalles del Animal</h3>
+            <button onclick="closeModal('detalleAnimalModal')" class="text-gray-500 hover:text-gray-700">×</button>
+        </div>
+        <div id="contenidoDetalleAnimal"></div>
+    </div></div></div>
+
+    <div id="compraModal" class="modal hidden"><div class="modal-content"><div class="p-6">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-lg font-semibold text-gray-800">Nueva Compra</h3>
+            <button onclick="closeModal('compraModal')" class="text-gray-500 hover:text-gray-700">×</button>
+        </div>
+        <form id="formularioCompra">
+            <div class="space-y-4">
+                <div class="form-group"><label>Proveedor *</label><input type="text" id="proveedorCompra" required></div>
+                <div class="form-group"><label>Fecha de Compra *</label><input type="date" id="fechaCompra" required></div>
+                <div class="form-group"><label>Animal *</label><select id="animalCompra" required></select></div>
+                <div class="form-group"><label>Precio Total (COP)</label><input type="number" id="precioCompraTotal" min="0"></div>
+                <div class="form-group"><label>Costo de Transporte (COP)</label><input type="number" id="costoTransporteCompra" min="0" value="0"></div>
+                <div class="form-group"><label>Observaciones</label><textarea id="observacionesCompra" rows="3" placeholder="Información adicional..."></textarea></div>
+            </div>
+            <div class="flex justify-end space-x-3 mt-6">
+                <button type="button" onclick="closeModal('compraModal')" class="btn btn-secondary">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Registrar Compra</button>
+            </div>
+        </form>
+    </div></div></div>
+
+    <div id="ventaLoteModal" class="modal hidden"><div class="modal-content"><div class="p-6">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-lg font-semibold text-gray-800">Venta por Lote</h3>
+            <button onclick="closeModal('ventaLoteModal')" class="text-gray-500 hover:text-gray-700">×</button>
+        </div>
+        <form id="formularioVentaLote">
+            <div class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="form-group"><label>Comprador *</label><input type="text" id="compradorVentaLote" required></div>
+                    <div class="form-group"><label>Fecha de Venta *</label><input type="date" id="fechaVentaLote" required></div>
+                </div>
+                <div class="form-group"><label>Animales para Venta</label><select id="animalesVentaLote" multiple size="5" class="w-full border border-gray-300 rounded-lg p-2" onchange="actualizarItemsVentaLote()"></select></div>
+                <div id="itemsVentaLote" class="space-y-3"></div>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <div class="flex justify-between items-center mb-2"><span class="text-sm text-gray-600">Total Animales:</span><span class="text-sm font-medium" id="totalAnimalesLote">0</span></div>
+                    <div class="flex justify-between items-center mb-2"><span class="text-sm text-gray-600">Peso Total (kg):</span><span class="text-sm font-medium" id="pesoTotalLote">0</span></div>
+                    <div class="flex justify-between items-center mb-2"><span class="text-sm text-gray-600">Precio por Kilo (COP):</span><input type="number" id="precioPorKiloLote" class="w-32 border border-gray-300 rounded px-2 py-1 text-sm" min="0" onchange="calcularTotalLote()"></div>
+                    <div class="flex justify-between items-center pt-2 border-t border-gray-200"><span class="text-lg font-semibold text-gray-800">Total:</span><span class="text-lg font-semibold text-green-600" id="totalLote">$0</span></div>
+                </div>
+                <div class="form-group"><label>Observaciones</label><textarea id="observacionesVentaLote" rows="3" placeholder="Información adicional..."></textarea></div>
+            </div>
+            <div class="flex justify-end space-x-3 mt-6">
+                <button type="button" onclick="closeModal('ventaLoteModal')" class="btn btn-secondary">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Registrar Venta por Lote</button>
+            </div>
+        </form>
+    </div></div></div>
+
+    <div id="nuevoPotreroModal" class="modal hidden"><div class="modal-content"><div class="p-6">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-lg font-semibold text-gray-800">Nuevo Potrero</h3>
+            <button onclick="closeModal('nuevoPotreroModal')" class="text-gray-500 hover:text-gray-700">×</button>
+        </div>
+        <form id="formularioPotrero">
+            <div class="space-y-4">
+                <div class="form-group"><label>Nombre del Potrero *</label><input type="text" id="nombrePotrero" required></div>
+                <div class="form-group"><label>Capacidad Máxima *</label><input type="number" id="capacidadPotrero" required min="1"></div>
+                <div class="form-group"><label>Área (hectáreas)</label><input type="number" id="areaPotrero" min="0" step="0.1"></div>
+                <div class="form-group"><label>Tipo de Pasto</label><select id="pastoPotrero"><option value="">Seleccionar tipo</option><option>Kikuyo</option><option>Elefante</option><option>Estrella Africana</option><option>Bermuda</option><option>Brizantha</option></select></div>
+                <div class="form-group"><label>Observaciones</label><textarea id="observacionesPotrero" rows="3" placeholder="Condiciones del potrero..."></textarea></div>
+            </div>
+            <div class="flex justify-end space-x-3 mt-6">
+                <button type="button" onclick="closeModal('nuevoPotreroModal')" class="btn btn-secondary">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Registrar Potrero</button>
+            </div>
+        </form>
+    </div></div></div>
+
+    <script>
+        // Datos iniciales
+        let animales = JSON.parse(localStorage.getItem('animales')) || [];
+        let compras = JSON.parse(localStorage.getItem('compras')) || [];
+        let ventas = JSON.parse(localStorage.getItem('ventas')) || [];
+        let vacunaciones = JSON.parse(localStorage.getItem('vacunaciones')) || [];
+        let potreros = JSON.parse(localStorage.getItem('potreros')) || [];
+        let filtros = { estado: 'todos', sexo: 'todos' };
+        let moduloActual = 'dashboard';
+
+        // Función para obtener elemento de forma segura
+        function getElement(id) {
+            return document.getElementById(id);
+        }
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                // Configurar fechas
+                const hoy = new Date().toISOString().split('T')[0];
+                const fechaCompra = getElement('fechaCompra');
+                const fechaVentaLote = getElement('fechaVentaLote');
+                if (fechaCompra) fechaCompra.value = hoy;
+                if (fechaVentaLote) fechaVentaLote.value = hoy;
+                
+                // Cargar datos
+                cargarDatos();
+                
+                // Mostrar pestaña inicial
+                showTab('dashboard');
+                
+                // Configurar eventos
+                configurarEventos();
+                
+            } catch (error) {
+                console.error('Error en la inicialización:', error);
+            }
+        });
+
+        // Configurar eventos
+        function configurarEventos() {
+            try {
+                // Eventos de formularios
+                const formAnimal = getElement('formularioAnimal');
+                if (formAnimal) formAnimal.addEventListener('submit', registrarAnimal);
+                
+                const formCompra = getElement('formularioCompra');
+                if (formCompra) formCompra.addEventListener('submit', registrarCompra);
+                
+                const formVenta = getElement('formularioVentaLote');
+                if (formVenta) formVenta.addEventListener('submit', registrarVentaLote);
+                
+                const formPotrero = getElement('formularioPotrero');
+                if (formPotrero) formPotrero.addEventListener('submit', registrarPotrero);
+                
+                const buscarAnimal = getElement('buscarAnimal');
+                if (buscarAnimal) buscarAnimal.addEventListener('input', mostrarListaAnimales);
+                
+                // Evento de precio por kilo
+                const precioPorKiloLote = getElement('precioPorKiloLote');
+                if (precioPorKiloLote) precioPorKiloLote.addEventListener('input', calcularTotalLote);
+                
+                // Inicializar tipo de edad
+                cambiarTipoEdad();
+                
+            } catch (error) {
+                console.error('Error al configurar eventos:', error);
+            }
+        }
+
+        // Función para mostrar pestañas
+        function showTab(tabId) {
+            try {
+                // Ocultar todas las pestañas
+                document.querySelectorAll('.tab-content').forEach(tab => {
+                    if (tab) {
+                        tab.classList.remove('active');
+                    }
+                });
+                
+                // Mostrar la pestaña seleccionada
+                const tab = getElement(tabId);
+                if (tab) {
+                    tab.classList.add('active');
+                }
+                
+                // Actualizar botones de navegación
+                document.querySelectorAll('.tab-button, .nav-item').forEach(btn => {
+                    if (btn) btn.classList.remove('active');
+                });
+                
+                // Activar el botón correspondiente
+                document.querySelectorAll(`[onclick="showTab('${tabId}')"]`).forEach(btn => {
+                    if (btn) btn.classList.add('active');
+                });
+                
+                // Actualizar contenido según la pestaña
+                switch(tabId) {
+                    case 'dashboard':
+                        actualizarDashboard();
+                        break;
+                    case 'animales':
+                        mostrarListaAnimales();
+                        break;
+                    case 'compras':
+                        mostrarListaCompras();
+                        break;
+                    case 'ventas':
+                        mostrarListaVentas();
+                        break;
+                    case 'potreros':
+                        mostrarListaPotreros();
+                        break;
+                    case 'reportes':
+                        // No necesitamos hacer nada especial para reportes
+                        break;
+                }
+
+                // Actualizar botón principal
+                actualizarBotonPrincipal(tabId);
+                
+            } catch (error) {
+                console.error('Error al mostrar pestaña:', error);
+            }
+        }
+
+        // Actualizar botón principal
+        function actualizarBotonPrincipal(tabId) {
+            try {
+                const boton = getElement('accionPrincipal');
+                const texto = getElement('textoAccion');
+                
+                if (boton && texto) {
+                    switch(tabId) {
+                        case 'animales':
+                            boton.onclick = () => openModal('nuevoAnimalModal');
+                            texto.textContent = '➕ Nuevo Animal';
+                            break;
+                        case 'compras':
+                            boton.onclick = () => openModal('compraModal');
+                            texto.textContent = '➕ Nueva Compra';
+                            break;
+                        case 'ventas':
+                            boton.onclick = () => openModal('ventaLoteModal');
+                            texto.textContent = '➕ Venta por Lote';
+                            break;
+                        case 'potreros':
+                            boton.onclick = () => openModal('nuevoPotreroModal');
+                            texto.textContent = '➕ Nuevo Potrero';
+                            break;
+                        default:
+                            boton.onclick = () => openModal('nuevoAnimalModal');
+                            texto.textContent = '➕ Nuevo Animal';
+                    }
+                }
+                
+            } catch (error) {
+                console.error('Error al actualizar botón principal:', error);
+            }
+        }
+
+        // Modales
+        function openModal(modalId) {
+            try {
+                const modal = getElement(modalId);
+                if (modal) {
+                    modal.classList.remove('hidden');
+                    if (modalId === 'ventaLoteModal') {
+                        llenarSelectAnimalesVenta();
+                        actualizarItemsVentaLote();
+                    }
+                }
+            } catch (error) {
+                console.error('Error al abrir modal:', error);
+            }
+        }
+
+        function closeModal(modalId) {
+            try {
+                const modal = getElement(modalId);
+                if (modal) {
+                    modal.classList.add('hidden');
+                }
+            } catch (error) {
+                console.error('Error al cerrar modal:', error);
+            }
+        }
+
+        // Cerrar modal al hacer clic fuera
+        window.addEventListener('click', function(event) {
+            try {
+                const modales = document.querySelectorAll('.modal');
+                modales.forEach(modal => {
+                    if (event.target === modal) {
+                        modal.classList.add('hidden');
+                    }
+                });
+            } catch (error) {
+                console.error('Error al cerrar modal con clic:', error);
+            }
+        });
+
+        // Imagen
+        const fotoAnimal = getElement('fotoAnimal');
+        if (fotoAnimal) {
+            fotoAnimal.addEventListener('change', function(e) {
+                try {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            const img = getElement('imagenPrevia');
+                            if (img) {
+                                img.src = e.target.result;
+                                img.style.display = 'block';
+                            }
+                            const icono = getElement('iconoCamara');
+                            if (icono) icono.style.display = 'none';
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                } catch (error) {
+                    console.error('Error al cargar imagen:', error);
+                }
+            });
+        }
+
+        // Tipo de edad
+        function cambiarTipoEdad() {
+            try {
+                const tipo = getElement('tipoEdad');
+                const campoFecha = getElement('campoFechaNacimiento');
+                const campoEstimada = getElement('campoEdadEstimada');
+                
+                if (tipo && campoFecha && campoEstimada) {
+                    if (tipo.value === 'fecha') {
+                        campoFecha.style.display = 'block';
+                        campoEstimada.style.display = 'none';
+                    } else {
+                        campoFecha.style.display = 'none';
+                        campoEstimada.style.display = 'grid';
+                    }
+                }
+            } catch (error) {
+                console.error('Error al cambiar tipo de edad:', error);
+            }
+        }
+
+        // Animales
+        function registrarAnimal(e) {
+            try {
+                e.preventDefault();
+                
+                const arete = getElement('arete').value;
+                const raza = getElement('raza').value;
+                const sexo = getElement('sexo').value;
+                const pesoInicial = parseFloat(getElement('pesoInicial').value);
+                const precioCompra = parseFloat(getElement('precioCompra').value);
+                const costoTransporte = parseFloat(getElement('costoTransporte').value) || 0;
+                const potreroAsignacion = getElement('potreroAsignacion').value;
+                
+                // Validaciones
+                if (!arete || !raza || !sexo || !pesoInicial || !precioCompra) {
+                    alert('Por favor, complete todos los campos obligatorios');
+                    return;
+                }
+                
+                // Calcular edad
+                let edadTexto = '';
+                const tipoEdad = getElement('tipoEdad').value;
+                
+                if (tipoEdad === 'fecha') {
+                    const fechaNac = getElement('fechaNacimiento').value;
+                    if (!fechaNac) {
+                        alert('Por favor, ingrese la fecha de nacimiento');
+                        return;
+                    }
+                    const hoy = new Date();
+                    const nac = new Date(fechaNac);
+                    const diffDays = Math.ceil((hoy - nac) / (1000 * 60 * 60 * 24));
+                    const anos = Math.floor(diffDays / 365);
+                    const meses = Math.floor((diffDays % 365) / 30);
+                    const dias = (diffDays % 365) % 30;
+                    
+                    if (anos) edadTexto += `${anos} año${anos > 1 ? 's' : ''}`;
+                    if (meses) edadTexto += `${anos ? ', ' : ''}${meses} mes${meses > 1 ? 'es' : ''}`;
+                    if (dias && !anos) edadTexto += `${anos || meses ? ', ' : ''}${dias} día${dias > 1 ? 's' : ''}`;
+                    if (!edadTexto) edadTexto = '0 días';
+                } else {
+                    const anos = parseInt(getElement('anosEstimados').value) || 0;
+                    const meses = parseInt(getElement('mesesEstimados').value) || 0;
+                    const dias = parseInt(getElement('diasEstimados').value) || 0;
+                    
+                    if (anos) edadTexto += `${anos} año${anos > 1 ? 's' : ''}`;
+                    if (meses) edadTexto += `${anos ? ', ' : ''}${meses} mes${meses > 1 ? 'es' : ''}`;
+                    if (dias && !anos) edadTexto += `${anos || meses ? ', ' : ''}${dias} día${dias > 1 ? 's' : ''}`;
+                    if (!edadTexto) edadTexto = '0 días';
+                }
+
+                const nuevoAnimal = {
+                    id: Date.now(),
+                    arete: arete,
+                    raza: raza,
+                    sexo: sexo,
+                    fechaNacimiento: tipoEdad === 'fecha' ? getElement('fechaNacimiento').value : null,
+                    edadTexto: edadTexto,
+                    pesoInicial: pesoInicial,
+                    precioCompra: precioCompra,
+                    costoTransporte: costoTransporte,
+                    potreroActual: potreroAsignacion || null,
+                    historialPotreros: [],
+                    foto: getElement('imagenPrevia').src,
+                    observaciones: getElement('observaciones').value,
+                    estado: 'activo',
+                    fechaIngreso: new Date().toISOString().split('T')[0],
+                    pesoHistorial: [{ fecha: new Date().toISOString().split('T')[0], peso: pesoInicial }]
+                };
+
+                // Asignar al potrero si se seleccionó
+                if (nuevoAnimal.potreroActual) {
+                    const potrero = potreros.find(p => p.id == nuevoAnimal.potreroActual);
+                    if (potrero) {
+                        potrero.animales.push(nuevoAnimal.id);
+                        nuevoAnimal.historialPotreros.push({ 
+                            potreroId: nuevoAnimal.potreroActual, 
+                            fecha: new Date().toISOString().split('T')[0], 
+                            tipo: 'entrada' 
+                        });
+                    }
+                }
+
+                animales.push(nuevoAnimal);
+                guardarDatos();
+                actualizarDashboard();
+                mostrarListaAnimales();
+                actualizarListasAnimales();
+                llenarSelectPotreros();
+                
+                // Resetear formulario
+                const form = getElement('formularioAnimal');
+                if (form) form.reset();
+                
+                const img = getElement('imagenPrevia');
+                if (img) {
+                    img.style.display = 'none';
+                    img.src = '';
+                }
+                const icono = getElement('iconoCamara');
+                if (icono) icono.style.display = 'block';
+                cambiarTipoEdad();
+                
+                // Cerrar modal
+                closeModal('nuevoAnimalModal');
+                
+                // Mostrar alerta
+                setTimeout(() => alert('Animal registrado correctamente'), 100);
+                
+            } catch (error) {
+                console.error('Error al registrar animal:', error);
+                alert('Error al registrar el animal. Por favor, intente nuevamente.');
+            }
+        }
+
+        function mostrarDetalleAnimal(id) {
+            try {
+                const animal = animales.find(a => a.id == id);
+                if (!animal) return;
+                
+                let edadActual = animal.edadTexto;
+                if (animal.fechaNacimiento) {
+                    const hoy = new Date(); 
+                    const nac = new Date(animal.fechaNacimiento);
+                    const diffDays = Math.ceil((hoy - nac) / (1000 * 60 * 60 * 24));
+                    const anos = Math.floor(diffDays / 365);
+                    const meses = Math.floor((diffDays % 365) / 30);
+                    const dias = (diffDays % 365) % 30;
+                    edadActual = '';
+                    if (anos) edadActual += `${anos} año${anos > 1 ? 's' : ''}`;
+                    if (meses) edadActual += `${anos ? ', ' : ''}${meses} mes${meses > 1 ? 'es' : ''}`;
+                    if (dias && !anos) edadActual += `${anos || meses ? ', ' : ''}${dias} día${dias > 1 ? 's' : ''}`;
+                    if (!edadActual) edadActual = '0 días';
+                }
+
+                let contenido = `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <div class="animal-photo"><img src="${animal.foto}" alt="Animal ${animal.arete}"></div>
+                            <div class="space-y-3 mt-4">
+                                <div><label class="text-sm font-medium text-gray-600">Arete</label><p class="font-medium">${animal.arete}</p></div>
+                                <div><label class="text-sm font-medium text-gray-600">Raza</label><p class="font-medium">${animal.raza}</p></div>
+                                <div><label class="text-sm font-medium text-gray-600">Sexo</label><p class="font-medium">${animal.sexo}</p></div>`;
+                
+                if (animal.fechaNacimiento) contenido += `<div><label class="text-sm font-medium text-gray-600">Fecha de Nacimiento</label><p class="font-medium">${animal.fechaNacimiento}</p></div>`;
+                
+                contenido += `
+                                <div><label class="text-sm font-medium text-gray-600">Edad</label><p class="font-medium">${edadActual}</p></div>
+                                <div><label class="text-sm font-medium text-gray-600">Estado</label><p class="font-medium ${animal.estado === 'activo' ? 'text-green-600' : animal.estado === 'vendido' ? 'text-blue-600' : 'text-red-600'}">${capitalizarPrimeraLetra(animal.estado)}</p></div>
+                                <div><label class="text-sm font-medium text-gray-600">Fecha de Ingreso</label><p class="font-medium">${animal.fechaIngreso}</p></div>
+                                <div><label class="text-sm font-medium text-gray-600">Potrero Actual</label><p class="font-medium">${animal.potreroActual ? getNombrePotrero(animal.potreroActual) : 'No asignado'}</p></div>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-gray-800 mb-4">Historial</h4>
+                            <div class="space-y-4">
+                                <div>
+                                    <div class="flex justify-between"><h5 class="font-medium text-gray-800">Pesos</h5><button onclick="agregarPeso(${animal.id})" class="text-sm text-green-600">+ Agregar</button></div>
+                                    <div class="bg-gray-50 p-3 rounded-lg mt-2 max-h-32 overflow-y-auto">`;
+                
+                animal.pesoHistorial.sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).forEach(peso => {
+                    contenido += `<div class="flex justify-between text-sm mb-1"><span>${peso.fecha}</span><span>${peso.peso} kg</span></div>`;
+                });
+                
+                contenido += `</div></div><div><div class="flex justify-between"><h5 class="font-medium text-gray-800">Vacunaciones</h5><button onclick="agregarVacunacion(${animal.id})" class="text-sm text-green-600">+ Agregar</button></div><div class="bg-gray-50 p-3 rounded-lg mt-2 max-h-32 overflow-y-auto">`;
+                
+                const vacunasAnimal = vacunaciones.filter(v => v.animalId == animal.id);
+                if (vacunasAnimal.length > 0) {
+                    vacunasAnimal.sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).forEach(vacuna => {
+                        contenido += `<div class="history-item"><p class="text-sm">${vacuna.tipo} - ${vacuna.fecha}</p><p class="text-xs text-gray-500">${vacuna.observaciones || ''}</p></div>`;
+                    });
+                } else {
+                    contenido += '<p class="text-sm text-gray-500">No hay vacunaciones registradas</p>';
+                }
+                
+                contenido += `</div></div><div><h5 class="font-medium text-gray-800">Movimiento de Potreros</h5><div class="bg-gray-50 p-3 rounded-lg mt-2 max-h-32 overflow-y-auto">`;
+                
+                if (animal.historialPotreros.length > 0) {
+                    animal.historialPotreros.sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).forEach(movimiento => {
+                        const potrero = potreros.find(p => p.id == movimiento.potreroId);
+                        const nombrePotrero = potrero ? potrero.nombre : 'Desconocido';
+                        contenido += `<div class="history-item"><p class="text-sm">${movimiento.tipo === 'entrada' ? 'Entró a' : 'Salió de'} ${nombrePotrero}</p><p class="text-xs text-gray-500">${movimiento.fecha}</p></div>`;
+                    });
+                } else {
+                    contenido += '<p class="text-sm text-gray-500">No hay movimientos registrados</p>';
+                }
+                
+                contenido += `</div></div><div><h5 class="font-medium text-gray-800">Compras</h5><div class="bg-gray-50 p-3 rounded-lg mt-2"><div class="text-sm"><p>Precio: $${formatoPesos(animal.precioCompra)}</p><p>Flete: $${formatoPesos(animal.costoTransporte)}</p><p>Total inversión: $${formatoPesos(animal.precioCompra + animal.costoTransporte)}</p></div></div></div></div></div></div><div class="flex justify-end space-x-3 mt-6"><button onclick="cambiarEstadoAnimal(${animal.id})" class="btn btn-secondary">Cambiar Estado</button><button onclick="cambiarPotrero(${animal.id})" class="btn btn-secondary">Cambiar Potrero</button><button onclick="eliminarAnimal(${animal.id})" class="btn btn-danger">Eliminar</button><button onclick="closeModal('detalleAnimalModal')" class="btn btn-primary">Cerrar</button></div>`;
+                
+                const titulo = getElement('tituloDetalleAnimal');
+                const contenidoDetalle = getElement('contenidoDetalleAnimal');
+                
+                if (titulo) titulo.textContent = `Detalles del Animal ${animal.arete}`;
+                if (contenidoDetalle) contenidoDetalle.innerHTML = contenido;
+                
+                openModal('detalleAnimalModal');
+                
+            } catch (error) {
+                console.error('Error al mostrar detalle de animal:', error);
+                alert('Error al mostrar los detalles del animal.');
+            }
+        }
+
+        function agregarPeso(animalId) {
+            try {
+                const peso = prompt('Ingrese el nuevo peso (kg):');
+                if (peso && !isNaN(peso) && peso > 0) {
+                    const animal = animales.find(a => a.id == animalId);
+                    if (animal) {
+                        animal.pesoHistorial.push({ fecha: new Date().toISOString().split('T')[0], peso: parseFloat(peso) });
+                        guardarDatos();
+                        mostrarDetalleAnimal(animalId);
+                        actualizarDashboard();
+                        mostrarListaAnimales();
+                        alert('Peso agregado correctamente');
+                    }
+                }
+            } catch (error) {
+                console.error('Error al agregar peso:', error);
+                alert('Error al agregar peso.');
+            }
+        }
+
+        function agregarVacunacion(animalId) {
+            try {
+                const tipo = prompt('Tipo de vacuna:');
+                if (tipo) {
+                    const fecha = prompt('Fecha de vacunación (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
+                    const observaciones = prompt('Observaciones (opcional):', '');
+                    vacunaciones.push({ id: Date.now(), animalId: animalId, tipo: tipo, fecha: fecha, observaciones: observaciones });
+                    guardarDatos();
+                    mostrarDetalleAnimal(animalId);
+                    alert('Vacunación registrada correctamente');
+                }
+            } catch (error) {
+                console.error('Error al agregar vacunación:', error);
+                alert('Error al registrar vacunación.');
+            }
+        }
+
+        function cambiarEstadoAnimal(animalId) {
+            try {
+                const animal = animales.find(a => a.id == animalId);
+                if (!animal) return;
+                
+                const nuevoEstado = prompt('Cambiar estado:\n1. Activo\n2. Vendido\n3. Fallecido\n\nIngrese el número:', animal.estado === 'activo' ? '1' : animal.estado === 'vendido' ? '2' : '3');
+                
+                if (nuevoEstado === '1') animal.estado = 'activo';
+                else if (nuevoEstado === '2') animal.estado = 'vendido';
+                else if (nuevoEstado === '3') animal.estado = 'fallecido';
+                
+                if (nuevoEstado) {
+                    guardarDatos();
+                    mostrarDetalleAnimal(animalId);
+                    actualizarDashboard();
+                    mostrarListaAnimales();
+                    alert('Estado actualizado correctamente');
+                }
+            } catch (error) {
+                console.error('Error al cambiar estado:', error);
+                alert('Error al cambiar estado.');
+            }
+        }
+
+        function eliminarAnimal(animalId) {
+            try {
+                if (confirm('¿Eliminar este animal? Esta acción no se puede deshacer.')) {
+                    const tieneCompras = compras.some(c => c.animalId == animalId);
+                    const tieneVentas = ventas.some(v => v.animalId == animalId);
+                    
+                    if (tieneCompras || tieneVentas) {
+                        alert('No se puede eliminar porque tiene compras o ventas asociadas.');
+                        return;
+                    }
+                    
+                    const animal = animales.find(a => a.id == animalId);
+                    if (animal && animal.potreroActual) {
+                        const potrero = potreros.find(p => p.id == animal.potreroActual);
+                        if (potrero) potrero.animales = potrero.animales.filter(id => id != animalId);
+                    }
+                    
+                    animales = animales.filter(a => a.id != animalId);
+                    guardarDatos();
+                    closeModal('detalleAnimalModal');
+                    actualizarDashboard();
+                    mostrarListaAnimales();
+                    mostrarListaPotreros();
+                    actualizarListasAnimales();
+                    llenarSelectPotreros();
+                    alert('Animal eliminado correctamente');
+                }
+            } catch (error) {
+                console.error('Error al eliminar animal:', error);
+                alert('Error al eliminar animal.');
+            }
+        }
+
+        // Compras
+        function registrarCompra(e) {
+            try {
+                e.preventDefault();
+                
+                const compra = {
+                    id: Date.now(),
+                    proveedor: getElement('proveedorCompra').value,
+                    fecha: getElement('fechaCompra').value,
+                    animalId: parseInt(getElement('animalCompra').value),
+                    precioTotal: parseFloat(getElement('precioCompraTotal').value) || 0,
+                    costoTransporte: parseFloat(getElement('costoTransporteCompra').value) || 0,
+                    observaciones: getElement('observacionesCompra').value
+                };
+                
+                compras.push(compra);
+                guardarDatos();
+                mostrarListaCompras();
+                actualizarDashboard();
+                getElement('formularioCompra').reset();
+                closeModal('compraModal');
+                setTimeout(() => alert('Compra registrada correctamente'), 100);
+            } catch (error) {
+                console.error('Error al registrar compra:', error);
+                alert('Error al registrar compra.');
+            }
+        }
+
+        // Ventas por lote
+        function llenarSelectAnimalesVenta() {
+            try {
+                const select = getElement('animalesVentaLote');
+                if (!select) return;
+                
+                select.innerHTML = '';
+                animales.filter(a => a.estado === 'activo').sort((a, b) => a.arete.localeCompare(b.arete)).forEach(animal => {
+                    const option = document.createElement('option');
+                    option.value = animal.id;
+                    option.textContent = `${animal.arete} - ${animal.raza} ${animal.sexo} (${animal.edadTexto})`;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error al llenar select animales venta:', error);
+            }
+        }
+
+        function actualizarItemsVentaLote() {
+            try {
+                const select = getElement('animalesVentaLote');
+                const container = getElement('itemsVentaLote');
+                if (!select || !container) return;
+                
+                container.innerHTML = '';
+                const selected = Array.from(select.selectedOptions);
+                
+                selected.forEach(option => {
+                    const animalId = parseInt(option.value);
+                    const animal = animales.find(a => a.id == animalId);
+                    if (animal) {
+                        const div = document.createElement('div');
+                        div.className = 'venta-lote-item';
+                        div.innerHTML = `
+                            <div class="flex justify-between mb-2">
+                                <span class="font-medium">${animal.arete} - ${animal.raza}</span>
+                                <button type="button" onclick="quitarAnimalVenta(${animal.id})" class="text-red-600 text-sm">×</button>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="form-group">
+                                    <label>Peso (kg)</label>
+                                    <input type="number" id="peso_${animal.id}" value="${animal.pesoHistorial[animal.pesoHistorial.length - 1].peso}" min="0" step="0.1" class="w-full" onchange="calcularTotalLote()">
+                                </div>
+                            </div>
+                        `;
+                        container.appendChild(div);
+                    }
+                });
+                calcularTotalLote();
+            } catch (error) {
+                console.error('Error al actualizar items venta lote:', error);
+            }
+        }
+
+        function quitarAnimalVenta(animalId) {
+            try {
+                const select = getElement('animalesVentaLote');
+                if (!select) return;
+                
+                const options = select.options;
+                for (let i = 0; i < options.length; i++) {
+                    if (parseInt(options[i].value) === animalId) {
+                        options[i].selected = false;
+                        break;
+                    }
+                }
+                actualizarItemsVentaLote();
+            } catch (error) {
+                console.error('Error al quitar animal venta:', error);
+            }
+        }
+
+        function calcularTotalLote() {
+            try {
+                const select = getElement('animalesVentaLote');
+                const container = getElement('totalLote');
+                if (!select || !container) return;
+                
+                const selected = Array.from(select.selectedOptions);
+                const precioPorKilo = parseFloat(getElement('precioPorKiloLote').value) || 0;
+                
+                let totalAnimales = 0;
+                let pesoTotal = 0;
+                let total = 0;
+                
+                selected.forEach(option => {
+                    const animalId = parseInt(option.value);
+                    const pesoInput = getElement(`peso_${animalId}`);
+                    const peso = pesoInput ? parseFloat(pesoInput.value) || 0 : 0;
+                    totalAnimales++;
+                    pesoTotal += peso;
+                    total += peso * precioPorKilo;
+                });
+                
+                const totalAnimalesLote = getElement('totalAnimalesLote');
+                const pesoTotalLote = getElement('pesoTotalLote');
+                
+                if (totalAnimalesLote) totalAnimalesLote.textContent = totalAnimales;
+                if (pesoTotalLote) pesoTotalLote.textContent = pesoTotal.toFixed(1);
+                container.textContent = formatoPesos(total);
+            } catch (error) {
+                console.error('Error al calcular total lote:', error);
+            }
+        }
+
+        function registrarVentaLote(e) {
+            try {
+                e.preventDefault();
+                const select = getElement('animalesVentaLote');
+                const selected = Array.from(select.selectedOptions);
+                const precioPorKilo = parseFloat(getElement('precioPorKiloLote').value) || 0;
+                
+                if (selected.length === 0) {
+                    alert('Seleccione al menos un animal');
+                    return;
+                }
+                
+                let totalVenta = 0;
+                selected.forEach(option => {
+                    const animalId = parseInt(option.value);
+                    const animal = animales.find(a => a.id == animalId);
+                    if (animal) {
+                        const pesoInput = getElement(`peso_${animalId}`);
+                        const pesoVenta = pesoInput ? parseFloat(pesoInput.value) || 0 : 0;
+                        const precioVenta = pesoVenta * precioPorKilo;
+                        totalVenta += precioVenta;
+                        
+                        const ventaIndividual = {
+                            id: Date.now() + Math.random(),
+                            comprador: getElement('compradorVentaLote').value,
+                            fecha: getElement('fechaVentaLote').value,
+                            animalId: animalId,
+                            pesoVenta: pesoVenta,
+                            precioVenta: precioVenta,
+                            observaciones: `Venta por lote - ${getElement('compradorVentaLote').value}`
+                        };
+                        
+                        animal.estado = 'vendido';
+                        if (pesoVenta > 0) {
+                            animal.pesoHistorial.push({ fecha: getElement('fechaVentaLote').value, peso: pesoVenta });
+                        }
+                        
+                        ventas.push(ventaIndividual);
+                    }
+                });
+                
+                guardarDatos();
+                mostrarListaVentas();
+                actualizarDashboard();
+                mostrarListaAnimales();
+                actualizarListasAnimales();
+                
+                getElement('formularioVentaLote').reset();
+                closeModal('ventaLoteModal');
+                setTimeout(() => alert(`Venta por lote registrada correctamente. Total: ${formatoPesos(totalVenta)}`), 100);
+            } catch (error) {
+                console.error('Error al registrar venta lote:', error);
+                alert('Error al registrar venta por lote.');
+            }
+        }
+
+        // Potreros
+        function registrarPotrero(e) {
+            try {
+                e.preventDefault();
+                
+                const nuevoPotrero = {
+                    id: Date.now(),
+                    nombre: getElement('nombrePotrero').value,
+                    capacidad: parseInt(getElement('capacidadPotrero').value),
+                    area: parseFloat(getElement('areaPotrero').value) || 0,
+                    tipoPasto: getElement('pastoPotrero').value,
+                    animales: [],
+                    observaciones: getElement('observacionesPotrero').value
+                };
+                
+                potreros.push(nuevoPotrero);
+                guardarDatos();
+                mostrarListaPotreros();
+                llenarSelectPotreros();
+                actualizarListasAnimales();
+                getElement('formularioPotrero').reset();
+                closeModal('nuevoPotreroModal');
+                setTimeout(() => alert('Potrero registrado correctamente'), 100);
+            } catch (error) {
+                console.error('Error al registrar potrero:', error);
+                alert('Error al registrar potrero.');
+            }
+        }
+
+        // Funciones de visualización
+        function mostrarListaAnimales() {
+            try {
+                const lista = getElement('listaAnimales');
+                if (!lista) return;
+                
+                lista.innerHTML = '';
+                
+                let animalesFiltrados = animales;
+                const busqueda = getElement('buscarAnimal').value.toLowerCase();
+                if (busqueda) {
+                    animalesFiltrados = animalesFiltrados.filter(animal => 
+                        animal.arete.toLowerCase().includes(busqueda) ||
+                        animal.raza.toLowerCase().includes(busqueda)
+                    );
+                }
+                
+                if (filtros.estado !== 'todos') animalesFiltrados = animalesFiltrados.filter(animal => animal.estado === filtros.estado);
+                if (filtros.sexo !== 'todos') animalesFiltrados = animalesFiltrados.filter(animal => animal.sexo.toLowerCase() === filtros.sexo);
+                
+                animalesFiltrados.sort((a, b) => new Date(b.fechaIngreso) - new Date(a.fechaIngreso));
+                
+                if (animalesFiltrados.length === 0) {
+                    lista.innerHTML = '<p class="text-center text-gray-500 py-4">No se encontraron animales</p>';
+                    return;
+                }
+                
+                animalesFiltrados.forEach(animal => {
+                    const ultimoPeso = animal.pesoHistorial[animal.pesoHistorial.length - 1];
+                    const card = document.createElement('div');
+                    card.className = 'animal-card bg-gray-50 p-4 rounded-lg';
+                    card.innerHTML = `
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between">
+                            <div class="flex items-center space-x-3 mb-3 sm:mb-0">
+                                <img src="${animal.foto}" alt="Animal" class="w-12 h-12 rounded-lg object-cover">
+                                <div>
+                                    <p class="font-medium text-gray-800">${animal.arete} - ${animal.raza}</p>
+                                    <p class="text-sm text-gray-500">${animal.sexo}, ${animal.edadTexto}</p>
+                                    <p class="text-sm text-gray-500">Último peso: ${ultimoPeso.peso} kg</p>
+                                </div>
+                            </div>
+                            <div class="flex flex-col sm:flex-row gap-2">
+                                <button onclick="mostrarDetalleAnimal(${animal.id})" class="btn btn-secondary btn-sm">Ver</button>
+                            </div>
+                        </div>
+                    `;
+                    lista.appendChild(card);
+                });
+            } catch (error) {
+                console.error('Error al mostrar lista de animales:', error);
+            }
+        }
+
+        function mostrarListaCompras() {
+            try {
+                const lista = getElement('listaCompras');
+                if (!lista) return;
+                
+                lista.innerHTML = '';
+                
+                if (compras.length === 0) {
+                    lista.innerHTML = '<p class="text-center text-gray-500 py-4">No hay compras registradas</p>';
+                    return;
+                }
+                
+                compras.sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).forEach(compra => {
+                    const animal = animales.find(a => a.id == compra.animalId);
+                    const card = document.createElement('div');
+                    card.className = 'bg-gray-50 p-4 rounded-lg';
+                    card.innerHTML = `
+                        <div class="flex flex-col sm:flex-row justify-between">
+                            <div>
+                                <p class="font-medium text-gray-800">Compra #${compra.id}</p>
+                                <p class="text-sm text-gray-500">${compra.proveedor} - ${compra.fecha}</p>
+                                <p class="text-sm text-gray-500">${animal ? `${animal.arete} - ${animal.raza}` : 'Animal desconocido'}</p>
+                            </div>
+                            <div class="text-right mt-2 sm:mt-0">
+                                <p class="font-semibold text-gray-800">$${formatoPesos(compra.precioTotal)}</p>
+                                <p class="text-sm text-green-600">Flete: $${formatoPesos(compra.costoTransporte)}</p>
+                            </div>
+                        </div>
+                    `;
+                    lista.appendChild(card);
+                });
+            } catch (error) {
+                console.error('Error al mostrar lista de compras:', error);
+            }
+        }
+
+        function mostrarListaVentas() {
+            try {
+                const lista = getElement('listaVentas');
+                if (!lista) return;
+                
+                lista.innerHTML = '';
+                
+                if (ventas.length === 0) {
+                    lista.innerHTML = '<p class="text-center text-gray-500 py-4">No hay ventas registradas</p>';
+                    return;
+                }
+                
+                const ventasAgrupadas = {};
+                ventas.forEach(venta => {
+                    const key = `${venta.fecha}_${venta.comprador}`;
+                    if (!ventasAgrupadas[key]) {
+                        ventasAgrupadas[key] = { fecha: venta.fecha, comprador: venta.comprador, animales: [], total: 0 };
+                    }
+                    ventasAgrupadas[key].animales.push(venta);
+                    ventasAgrupadas[key].total += venta.precioVenta;
+                });
+                
+                Object.values(ventasAgrupadas).sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).forEach(grupo => {
+                    const card = document.createElement('div');
+                    card.className = 'bg-gray-50 p-4 rounded-lg';
+                    card.innerHTML = `
+                        <div class="flex flex-col sm:flex-row justify-between">
+                            <div>
+                                <p class="font-medium text-gray-800">Venta a ${grupo.comprador}</p>
+                                <p class="text-sm text-gray-500">${grupo.fecha}</p>
+                                <p class="text-sm text-gray-500">${grupo.animales.length} animal(es)</p>
+                            </div>
+                            <div class="text-right mt-2 sm:mt-0">
+                                <p class="font-semibold text-gray-800">$${formatoPesos(grupo.total)}</p>
+                                <p class="text-sm text-green-600">${grupo.animales.length} animal(es)</p>
+                            </div>
+                        </div>
+                    `;
+                    lista.appendChild(card);
+                });
+            } catch (error) {
+                console.error('Error al mostrar lista de ventas:', error);
+            }
+        }
+
+        function mostrarListaPotreros() {
+            try {
+                const lista = getElement('listaPotreros');
+                if (!lista) return;
+                
+                lista.innerHTML = '';
+                
+                if (potreros.length === 0) {
+                    lista.innerHTML = '<p class="text-center text-gray-500 py-4">No hay potreros registrados</p>';
+                    return;
+                }
+                
+                potreros.forEach(potrero => {
+                    const animalesPotrero = animales.filter(a => a.potreroActual == potrero.id);
+                    const capacidad = animalesPotrero.length + '/' + potrero.capacidad;
+                    const porcentaje = (animalesPotrero.length / potrero.capacidad) * 100;
+                    
+                    const card = document.createElement('div');
+                    card.className = 'potrero-card';
+                    card.innerHTML = `
+                        <div class="flex justify-between items-center mb-3">
+                            <h4 class="font-semibold text-gray-800">${potrero.nombre}</h4>
+                            <div class="text-right">
+                                <span class="text-sm font-medium">${capacidad}</span>
+                                <div class="w-full bg-gray-200 rounded-full h-2 mt-1">
+                                    <div class="bg-green-600 h-2 rounded-full" style="width: ${porcentaje}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4 mb-3">
+                            <div>
+                                <p class="text-sm text-gray-600">Área</p>
+                                <p class="font-medium">${potrero.area} ha</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-600">Pasto</p>
+                                <p class="font-medium">${potrero.tipoPasto || 'No especificado'}</p>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <p class="text-sm text-gray-600 mb-2">Animales:</p>
+                            <div class="space-y-1 max-h-32 overflow-y-auto">`;
+                    
+                    if (animalesPotrero.length > 0) {
+                        animalesPotrero.forEach(animal => {
+                            card.innerHTML += `
+                                <div class="potrero-animal">
+                                    <div class="flex justify-between">
+                                        <span class="text-sm">${animal.arete}</span>
+                                        <span class="text-xs text-gray-500">${animal.raza}</span>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    } else {
+                        card.innerHTML += '<p class="text-sm text-gray-500">No hay animales asignados</p>';
+                    }
+                    
+                    card.innerHTML += '</div></div></div>';
+                    lista.appendChild(card);
+                });
+            } catch (error) {
+                console.error('Error al mostrar lista de potreros:', error);
+            }
+        }
+
+        // Reportes
+        function generarReporte(tipo) {
+            try {
+                let contenido = '';
+                switch(tipo) {
+                    case 'inventario':
+                        contenido = 'INVENTARIO DE ANIMALES\n\n';
+                        contenido += 'Arete,Raza,Sexo,Edad,Peso,Precio Compra,Flete,Estado,Potrero\n';
+                        animales.forEach(animal => {
+                            const potrero = animal.potreroActual ? getNombrePotrero(animal.potreroActual) : 'No asignado';
+                            contenido += `"${animal.arete}","${animal.raza}","${animal.sexo}","${animal.edadTexto}","${animal.pesoInicial}","${animal.precioCompra}","${animal.costoTransporte}","${animal.estado}","${potrero}"\n`;
+                        });
+                        break;
+                    case 'razas':
+                        contenido = 'ANIMALES POR RAZA\n\n';
+                        const razas = {};
+                        animales.forEach(animal => { razas[animal.raza] = (razas[animal.raza] || 0) + 1; });
+                        for (const [raza, cantidad] in Object.entries(razas)) { contenido += `${raza}: ${cantidad} animales\n`; }
+                        break;
+                    case 'sanitario':
+                        contenido = 'CONTROL SANITARIO\n\n';
+                        contenido += 'Arete,Raza,Última Vacunación,Tipo,Fecha\n';
+                        animales.forEach(animal => {
+                            const ultimaVacuna = vacunaciones.filter(v => v.animalId == animal.id).sort((a, b) => new Date(b.fecha) - new Date(a.fecha))[0];
+                            if (ultimaVacuna) contenido += `"${animal.arete}","${animal.raza}","${ultimaVacuna.tipo}","${ultimaVacuna.fecha}"\n`;
+                            else contenido += `"${animal.arete}","${animal.raza}","Ninguna","-"\n`;
+                        });
+                        break;
+                    case 'potreros':
+                        contenido = 'DISTRIBUCIÓN POR POTREROS\n\n';
+                        potreros.forEach(potrero => {
+                            contenido += `\n${potrero.nombre}\n`;
+                            contenido += 'Capacidad: ' + potrero.capacidad + '\n';
+                            contenido += 'Área: ' + potrero.area + ' ha\n';
+                            contenido += 'Tipo de pasto: ' + (potrero.tipoPasto || 'No especificado') + '\n';
+                            contenido += 'Animales:\n';
+                            const animalesPotrero = animales.filter(a => a.potreroActual == potrero.id);
+                            if (animalesPotrero.length > 0) {
+                                animalesPotrero.forEach(animal => {
+                                    contenido += `  ${animal.arete} - ${animal.raza} ${animal.sexo} (${animal.edadTexto})\n`;
+                                });
+                            } else {
+                                contenido += '  No hay animales asignados\n';
+                            }
+                            contenido += '\n';
+                        });
+                        break;
+                }
+                alert('Reporte generado:\n\n' + contenido);
+            } catch (error) {
+                console.error('Error al generar reporte:', error);
+                alert('Error al generar reporte.');
+            }
+        }
+
+        function exportarExcel() {
+            try {
+                let csv = 'Arete,Raza,Sexo,Edad,Peso,Precio Compra,Flete,Estado,Potrero\n';
+                animales.forEach(animal => {
+                    const potrero = animal.potreroActual ? getNombrePotrero(animal.potreroActual) : 'No asignado';
+                    csv += `"${animal.arete}","${animal.raza}","${animal.sexo}","${animal.edadTexto}","${animal.pesoInicial}","${animal.precioCompra}","${animal.costoTransporte}","${animal.estado}","${potrero}"\n`;
+                });
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.setAttribute('href', url);
+                link.setAttribute('download', 'inventario_ganado.csv');
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                alert('Datos exportados a Excel (CSV) correctamente');
+            } catch (error) {
+                console.error('Error al exportar Excel:', error);
+                alert('Error al exportar datos.');
+            }
+        }
+
+        // Funciones auxiliares
+        function guardarDatos() {
+            try {
+                localStorage.setItem('animales', JSON.stringify(animales));
+                localStorage.setItem('compras', JSON.stringify(compras));
+                localStorage.setItem('ventas', JSON.stringify(ventas));
+                localStorage.setItem('vacunaciones', JSON.stringify(vacunaciones));
+                localStorage.setItem('potreros', JSON.stringify(potreros));
+            } catch (error) {
+                console.error('Error al guardar datos:', error);
+            }
+        }
+
+        function cargarDatos() {
+            try {
+                const storedAnimales = localStorage.getItem('animales');
+                const storedCompras = localStorage.getItem('compras');
+                const storedVentas = localStorage.getItem('ventas');
+                const storedVacunaciones = localStorage.getItem('vacunaciones');
+                const storedPotreros = localStorage.getItem('potreros');
+
+                if (storedAnimales) animales = JSON.parse(storedAnimales);
+                if (storedCompras) compras = JSON.parse(storedCompras);
+                if (storedVentas) ventas = JSON.parse(storedVentas);
+                if (storedVacunaciones) vacunaciones = JSON.parse(storedVacunaciones);
+                if (storedPotreros) potreros = JSON.parse(storedPotreros);
+
+                // Crear datos de ejemplo si no existen
+                if (animales.length === 0) {
+                    animales.push({
+                        id: 1,
+                        arete: '#001',
+                        raza: 'Angus',
+                        sexo: 'Hembra',
+                        fechaNacimiento: '2022-01-15',
+                        edadTexto: '2 años, 2 meses',
+                        pesoInicial: 450,
+                        precioCompra: 1200000,
+                        costoTransporte: 150000,
+                        potreroActual: 1,
+                        historialPotreros: [],
+                        foto: 'https://placehold.co/300x200/e5e7eb/6b7280?text=001',
+                        observaciones: 'Hembra sana, buena productora',
+                        estado: 'activo',
+                        fechaIngreso: '2024-01-15',
+                        pesoHistorial: [{ fecha: '2024-01-15', peso: 430 }, { fecha: '2024-02-15', peso: 440 }, { fecha: '2024-03-15', peso: 450 }]
+                    });
+                }
+                
+                if (potreros.length === 0) {
+                    potreros.push({
+                        id: 1,
+                        nombre: 'Potrero 1',
+                        capacidad: 20,
+                        area: 5.2,
+                        tipoPasto: 'Kikuyo',
+                        animales: [1],
+                        observaciones: 'Potrero principal con buen pasto'
+                    });
+                }
+                
+                if (compras.length === 0) {
+                    compras.push({
+                        id: 1,
+                        proveedor: 'Ganadería El Sol',
+                        fecha: '2024-01-15',
+                        animalId: 1,
+                        precioTotal: 1200000,
+                        costoTransporte: 150000,
+                        observaciones: 'Compra de animales jóvenes'
+                    });
+                }
+
+                guardarDatos();
+
+            } catch (error) {
+                console.error('Error al cargar datos:', error);
+            }
+        }
+
+        function aplicarFiltro(tipo, valor) {
+            try {
+                filtros[tipo] = valor;
+                mostrarListaAnimales();
+                document.querySelectorAll('.filter-tag').forEach(btn => { 
+                    btn.style.backgroundColor = '#10B981'; 
+                    btn.style.color = 'white'; 
+                });
+                event.target.style.backgroundColor = '#059669';
+            } catch (error) {
+                console.error('Error al aplicar filtro:', error);
+            }
+        }
+
+        function limpiarActividad() {
+            try {
+                if (confirm('¿Limpiar la actividad reciente?')) {
+                    const actividad = getElement('actividadReciente');
+                    if (actividad) actividad.innerHTML = '';
+                    alert('Actividad reciente limpiada');
+                }
+            } catch (error) {
+                console.error('Error al limpiar actividad:', error);
+            }
+        }
+
+        function actualizarDashboard() {
+            try {
+                const totalAnimales = getElement('totalAnimales');
+                const animalesVacunados = getElement('animalesVacunados');
+                const ventasHoy = getElement('ventasHoy');
+                const gananciaHoy = getElement('gananciaHoy');
+                const animalesRecientes = getElement('animalesRecientes');
+                const actividadReciente = getElement('actividadReciente');
+                
+                if (totalAnimales) totalAnimales.textContent = animales.length;
+                if (animalesVacunados) animalesVacunados.textContent = animales.filter(a => vacunaciones.some(v => v.animalId == a.id)).length;
+                
+                const hoy = new Date().toISOString().split('T')[0];
+                const ventasHoyData = ventas.filter(v => v.fecha === hoy);
+                const totalVentasHoy = ventasHoyData.reduce((sum, v) => sum + v.precioVenta, 0);
+                if (ventasHoy) ventasHoy.textContent = `$${formatoPesos(totalVentasHoy)}`;
+                
+                let gananciaHoyTotal = 0;
+                ventasHoyData.forEach(venta => {
+                    const animal = animales.find(a => a.id == venta.animalId);
+                    if (animal) gananciaHoyTotal += (venta.precioVenta - (animal.precioCompra + animal.costoTransporte));
+                });
+                if (gananciaHoy) gananciaHoy.textContent = `$${formatoPesos(gananciaHoyTotal)}`;
+                
+                if (animalesRecientes) {
+                    animalesRecientes.innerHTML = '';
+                    const animalesRecientesData = animales.sort((a, b) => new Date(b.fechaIngreso) - new Date(a.fechaIngreso)).slice(0, 3);
+                    
+                    animalesRecientesData.forEach(animal => {
+                        const ultimoPeso = animal.pesoHistorial[animal.pesoHistorial.length - 1];
+                        const card = document.createElement('div');
+                        card.className = 'animal-card bg-gray-50 p-4 rounded-lg';
+                        card.innerHTML = `
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-3">
+                                    <img src="${animal.foto}" alt="Animal" class="w-12 h-12 rounded-lg object-cover">
+                                    <div>
+                                        <p class="font-medium text-gray-800">${animal.arete} - ${animal.raza}</p>
+                                        <p class="text-sm text-gray-500">${animal.sexo}, ${animal.edadTexto}</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <span class="status-badge status-${animal.estado}">${capitalizarPrimeraLetra(animal.estado)}</span>
+                                    <p class="text-sm text-gray-500 mt-1">${ultimoPeso.peso} kg</p>
+                                </div>
+                            </div>
+                        `;
+                        card.onclick = () => mostrarDetalleAnimal(animal.id);
+                        animalesRecientes.appendChild(card);
+                    });
+                }
+                
+                if (actividadReciente) {
+                    actividadReciente.innerHTML = '';
+                    const actividad = [];
+                    
+                    animales.sort((a, b) => new Date(b.fechaIngreso) - new Date(a.fechaIngreso)).slice(0, 2).forEach(animal => {
+                        actividad.push({ tipo: 'animal', texto: `Animal ${animal.arete} registrado`, fecha: animal.fechaIngreso, hora: '10:30' });
+                    });
+                    
+                    vacunaciones.sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).slice(0, 2).forEach(vacuna => {
+                        const animal = animales.find(a => a.id == vacuna.animalId);
+                        if (animal) actividad.push({ tipo: 'vacuna', texto: `Vacunación de animal ${animal.arete}`, fecha: vacuna.fecha, hora: '09:15' });
+                    });
+                    
+                    ventas.sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).slice(0, 2).forEach(venta => {
+                        const animal = animales.find(a => a.id == venta.animalId);
+                        if (animal) actividad.push({ tipo: 'venta', texto: `Venta de animal ${animal.arete}`, fecha: venta.fecha, hora: '15:45' });
+                    });
+                    
+                    actividad.sort((a, b) => new Date(`${b.fecha} ${b.hora}`) - new Date(`${a.fecha} ${a.hora}`)).slice(0, 5);
+                    
+                    actividad.forEach(item => {
+                        const div = document.createElement('div');
+                        div.className = 'flex items-start space-x-3';
+                        div.innerHTML = `
+                            <div class="w-2 h-2 bg-${item.tipo === 'animal' ? 'green' : item.tipo === 'vacuna' ? 'blue' : 'purple'}-500 rounded-full mt-2"></div>
+                            <div class="flex-1">
+                                <p class="text-sm text-gray-800">${item.texto}</p>
+                                <p class="text-xs text-gray-500">${item.fecha}, ${item.hora} AM</p>
+                            </div>
+                        `;
+                        actividadReciente.appendChild(div);
+                    });
+                }
+            } catch (error) {
+                console.error('Error al actualizar dashboard:', error);
+            }
+        }
+
+        function actualizarListasAnimales() {
+            try {
+                ['animalCompra', 'animalVenta'].forEach(id => {
+                    const select = getElement(id);
+                    if (select) {
+                        select.innerHTML = '<option value="">Seleccionar animal</option>';
+                        animales.filter(a => a.estado === 'activo').forEach(animal => {
+                            const option = document.createElement('option');
+                            option.value = animal.id;
+                            option.textContent = `${animal.arete} - ${animal.raza} ${animal.sexo}`;
+                            select.appendChild(option);
+                        });
+                    }
+                });
+            } catch (error) {
+                console.error('Error al actualizar listas de animales:', error);
+            }
+        }
+
+        function llenarSelectPotreros() {
+            try {
+                const select = getElement('potreroAsignacion');
+                if (select) {
+                    select.innerHTML = '<option value="">Seleccionar potrero</option>';
+                    potreros.forEach(potrero => {
+                        const option = document.createElement('option');
+                        option.value = potrero.id;
+                        option.textContent = potrero.nombre;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error al llenar select potreros:', error);
+            }
+        }
+
+        function getNombrePotrero(potreroId) {
+            try {
+                const potrero = potreros.find(p => p.id == potreroId);
+                return potrero ? potrero.nombre : 'Desconocido';
+            } catch (error) {
+                console.error('Error al obtener nombre de potrero:', error);
+                return 'Desconocido';
+            }
+        }
+
+        function formatoPesos(valor) {
+            try {
+                return valor.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
+            } catch (error) {
+                console.error('Error al formatear pesos:', error);
+                return '$' + valor;
+            }
+        }
+
+        function capitalizarPrimeraLetra(string) {
+            try {
+                return string.charAt(0).toUpperCase() + string.slice(1);
+            } catch (error) {
+                console.error('Error al capitalizar primera letra:', error);
+                return string;
+            }
+        }
+
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            const formAnimal = getElement('formularioAnimal');
+            if (formAnimal) {
+                formAnimal.addEventListener('submit', registrarAnimal);
+            }
+            
+            const formCompra = getElement('formularioCompra');
+            if (formCompra) {
+                formCompra.addEventListener('submit', registrarCompra);
+            }
+            
+            const formVenta = getElement('formularioVentaLote');
+            if (formVenta) {
+                formVenta.addEventListener('submit', registrarVentaLote);
+            }
+            
+            const formPotrero = getElement('formularioPotrero');
+            if (formPotrero) {
+                formPotrero.addEventListener('submit', registrarPotrero);
+            }
+            
+            const buscarAnimal = getElement('buscarAnimal');
+            if (buscarAnimal) {
+                buscarAnimal.addEventListener('input', mostrarListaAnimales);
+            }
+        });
+    </script>
+</body>
+</html>
+```javascript
+// Agrega esto al final de tu script para convertirlo en PWA
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+            .then(registration => console.log('SW registrado'))
+            .catch(error => console.log('Error en registro de SW:', error));
+    });
+}
+```
+
+Crea un archivo `sw.js`:
+```javascript
+const CACHE_NAME = 'agrocontrol-cache-v1';
+const urlsToCache = [
+    '/',
+    '/index.html'
+];
+
+self.addEventListener('install', event => {
+    event.waitUntil(
+        caches.open(CACHE_NAME)
+            .then(cache => cache.addAll(urlsToCache))
+    );
+});
+
+self.addEventListener('fetch', event => {
+    event.respondWith(
+        caches.match(event.request)
+            .then(response => {
+                if (response) return response;
+                return fetch(event.request);
+            })
+    );
+});
+```
+
+Y un `manifest.json`:
+```json
+{
+    "name": "AgroControl",
+    "short_name": "AgroControl",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#10B981",
+    "icons": [
+        {
+            "src": "icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}
+```
